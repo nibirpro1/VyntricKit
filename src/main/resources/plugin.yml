@@ -1,0 +1,11 @@
+name: VyntricKit
+version: 1.0.0
+main: com.vyntric.kitplugin.KitPlugin
+api-version: '1.21'
+author: Vyntric
+description: Simple kit plugin - /kit set and /kit add with GUI editor
+
+commands:
+  kit:
+    description: Kit management command
+    usage: "/kit set <player> <kitname>  |  /kit add <kitname>"
