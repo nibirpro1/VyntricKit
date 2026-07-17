@@ -1,7 +1,6 @@
 package com.vyntric.kitplugin;
 
 import org.bukkit.Material;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -41,9 +40,7 @@ public class KitGUIListener implements Listener {
             }
         }
 
-        FileConfiguration kits = plugin.getKitsConfig();
-        kits.set("kits." + kitName, items);
-        plugin.saveKitsConfig();
+        plugin.saveKitItems(kitName, items);
 
         plugin.getOpenGuis().remove(uuid);
         player.sendMessage("§aKit §e" + kitName + " §aautomatic save hoye geche! (" + items.size() + " ta item)");

@@ -6,8 +6,6 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
-import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -15,7 +13,6 @@ import org.bukkit.inventory.ItemStack;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 public class KitCommand implements CommandExecutor, TabCompleter {
@@ -80,29 +77,21 @@ public class KitCommand implements CommandExecutor, TabCompleter {
             return;
         }
 
-        FileConfiguration kits = plugin.getKitsConfig();
-        String path = "kits." + kitName;
-
-        if (!kits.contains(path)) {
+        if (!plugin.kitExists(kitName)) {
             sender.sendMessage("§cEmon kono kit nai: §e" + kitName);
             return;
         }
 
-        List<?> rawItems = kits.getList(path);
-        if (rawItems == null || rawItems.isEmpty()) {
+        List<ItemStack> items = plugin.getKitItems(kitName);
+        if (items.isEmpty()) {
             sender.sendMessage("§cKit ta khali ache, age item add koro (/kit add " + kitName + ")");
             return;
         }
 
         int given = 0;
-        for (Object obj : rawItems) {
-            if (obj instanceof ItemStack) {
-                ItemStack item = ((ItemStack) obj).clone();
-                if (item.getType() != Material.AIR) {
-                    target.getInventory().addItem(item);
-                    given++;
-                }
-            }
+        for (ItemStack item : items) {
+            target.getInventory().addItem(item.clone());
+            given++;
         }
 
         target.sendMessage("§aTumi §e" + kitName + " §akit peyecho! (" + given + " ta item)");
@@ -126,19 +115,12 @@ public class KitCommand implements CommandExecutor, TabCompleter {
         Inventory gui = Bukkit.createInventory(null, 54, "Kit Editor: " + kitName);
 
         // Age theke kit thakle, existing item gula GUI te dekhabe (edit korar jonno)
-        FileConfiguration kits = plugin.getKitsConfig();
-        String path = "kits." + kitName;
-        if (kits.contains(path)) {
-            List<?> rawItems = kits.getList(path);
-            if (rawItems != null) {
-                int slot = 0;
-                for (Object obj : rawItems) {
-                    if (obj instanceof ItemStack && slot < 54) {
-                        gui.setItem(slot, (ItemStack) obj);
-                        slot++;
-                    }
-                }
-            }
+        List<ItemStack> existingItems = plugin.getKitItems(kitName);
+        int slot = 0;
+        for (ItemStack item : existingItems) {
+            if (slot >= 54) break;
+            gui.setItem(slot, item);
+            slot++;
         }
 
         plugin.getOpenGuis().put(player.getUniqueId(), kitName);
@@ -154,17 +136,13 @@ public class KitCommand implements CommandExecutor, TabCompleter {
         }
 
         String kitName = args[1];
-        FileConfiguration kits = plugin.getKitsConfig();
-        String path = "kits." + kitName;
 
-        if (!kits.contains(path)) {
+        if (!plugin.kitExists(kitName)) {
             sender.sendMessage("§cEmon kono kit nai: §e" + kitName);
             return;
         }
 
-        kits.set(path, null);
-        plugin.saveKitsConfig();
-
+        plugin.removeKit(kitName);
         sender.sendMessage("§aKit §e" + kitName + " §adelete kore deya hoyeche.");
     }
 
@@ -184,33 +162,21 @@ public class KitCommand implements CommandExecutor, TabCompleter {
         if (args.length == 2) {
             String sub = args[0].toLowerCase();
             if (sub.equals("set")) {
-                // Online player der naam suggest korbe
                 for (Player p : Bukkit.getOnlinePlayers()) {
                     options.add(p.getName());
                 }
             } else if (sub.equals("add") || sub.equals("remove")) {
-                // Existing kit-er naam suggest korbe
-                options.addAll(getKitNames());
+                options.addAll(plugin.getKitNames());
             }
             return filter(options, args[1]);
         }
 
         if (args.length == 3 && args[0].equalsIgnoreCase("set")) {
-            // /kit set <player> <kitname> -> kitname suggest korbe
-            options.addAll(getKitNames());
+            options.addAll(plugin.getKitNames());
             return filter(options, args[2]);
         }
 
         return options;
-    }
-
-    private List<String> getKitNames() {
-        ConfigurationSection section = plugin.getKitsConfig().getConfigurationSection("kits");
-        if (section == null) {
-            return new ArrayList<>();
-        }
-        Set<String> keys = section.getKeys(false);
-        return new ArrayList<>(keys);
     }
 
     private List<String> filter(List<String> options, String typed) {
